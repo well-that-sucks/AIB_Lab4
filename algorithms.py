@@ -1,9 +1,9 @@
 from collections import deque as queue
 
 class Algoritms:
-    MINIMAX_MAX_DEPTH = 6
+    MINIMAX_MAX_DEPTH = 4
     EXPECTIMAX_MAX_DEPTH = 3
-    MINIMAX_WIN_VALUE = 10000
+    MINIMAX_WIN_VALUE = 1000000
 
     def return_min(self, res1, res2):
         if (res1[0] <= res2[0]):
@@ -157,12 +157,14 @@ class Algoritms:
             if (distance < min_dist):
                 min_dist = distance
         fx = -5000
+        if len(c_coord) == 0:
+            c_coord.append((1, 1))
         if (avg_dist != 0):
-            fx = coins_collected * 50 + (1000 - min_dist) * (1 / len(c_coord)) * 10 - (1 / avg_dist) * 1000
-        if (fx > self.MINIMAX_WIN_VALUE):
-            fx = self.MINIMAX_WIN_VALUE
-        if (fx < -self.MINIMAX_WIN_VALUE):
-            fx = -self.MINIMAX_WIN_VALUE
+            fx = coins_collected * 50 + (1000 - min_dist) * (1 / len(c_coord)) * 10 - (1 / avg_dist) * 1000 # Maybe 1000?
+        #if (fx > self.MINIMAX_WIN_VALUE):
+        #    fx = self.MINIMAX_WIN_VALUE - 999
+        #if (fx < -self.MINIMAX_WIN_VALUE):
+        #    fx = -self.MINIMAX_WIN_VALUE + 999
         return fx
 
     def get_winner(self, p_coord, b_coord, c_coord):
@@ -185,7 +187,7 @@ class Algoritms:
         d_row = [-1, 0, 1, 0]
         d_col = [0, 1, 0, -1]
         if (step % 2 == 1):
-            v = -999999
+            v = -9999999
             best_move = None
             for i in range(4):
                 adjx = p_coord[0] + d_row[i]
@@ -213,16 +215,27 @@ class Algoritms:
                     alpha = max(v, alpha)
             return v, best_move
         else:
-            v = 999999
+            v = 9999999
+            t_arr = []
             for i in range(len(b_coord)):
-                for j in range(4):
-                    adjx = b_coord[i][0] + d_row[j]
-                    adjy = b_coord[i][1] + d_col[j]
-                    if adjy in range(len(maze)) and adjx in range(len(maze[0])) and maze[adjy][adjx] != '#':
-                        t = b_coord[i]
-                        b_coord[i] = (adjx, adjy)
-                        v = min(v, self.minimax(maze, p_coord, b_coord, c_coord, step + 1, alpha, beta, coins_collected)[0])
-                        b_coord[i] = t
+                t_arr.append(0)
+            if len(t_arr) == 0:
+                t_arr.append(4)
+            while t_arr[0] < 4:
+                t_arr[len(t_arr) - 1] += 1
+                for i in reversed(range(1, len(t_arr))):
+                    if t_arr[i] == 4:
+                        t_arr[i] = 0
+                        t_arr[i - 1] += 1
+                if t_arr[0] < 4:
+                    b_coord_new = []
+                    for i in range(len(b_coord)):
+                        adjx = b_coord[i][0] + d_row[t_arr[i]]
+                        adjy = b_coord[i][1] + d_col[t_arr[i]]
+                        if adjy in range(len(maze)) and adjx in range(len(maze[0])) and maze[adjy][adjx] != '#':
+                            b_coord_new.append((adjx, adjy))
+                    if len(b_coord_new) == len(b_coord):
+                        v = min(v, self.minimax(maze, p_coord, b_coord_new, c_coord, step + 1, alpha, beta, coins_collected)[0])
                         if v <= alpha:
                             return v, None
                         beta = min(v, beta)
@@ -237,7 +250,7 @@ class Algoritms:
         d_row = [-1, 0, 1, 0]
         d_col = [0, 1, 0, -1]
         if (step % 2 == 1):
-            v = -999999
+            v = -9999999
             best_move = None
             for i in range(4):
                 adjx = p_coord[0] + d_row[i]
@@ -247,6 +260,7 @@ class Algoritms:
                     i = 0
                     while not(is_coin_collision) and i in range(len(c_coord)):
                         if not(is_coin_collision) and c_coord[i] == (adjx, adjy):
+                            # Maybe solve the problem w/o deleting coin? For example, substract from length of coin list amount of coins collected in f(x)
                             t = c_coord[i]
                             del c_coord[i]
                             res = self.expectimax(maze, (adjx, adjy), b_coord, c_coord, step + 1, coins_collected + 1)[0]
@@ -255,7 +269,7 @@ class Algoritms:
                         i += 1
 
                     if not(is_coin_collision):
-                        res = self.minimax(maze, (adjx, adjy), b_coord, c_coord, step + 1, coins_collected)[0]
+                        res = self.expectimax(maze, (adjx, adjy), b_coord, c_coord, step + 1, coins_collected)[0]
                     if (res > v):
                         v = res
                         if (step == 1):
@@ -265,10 +279,10 @@ class Algoritms:
             v = 0
             branches = 0
             t_arr = []
-
             for i in range(len(b_coord)):
                 t_arr.append(0)
-
+            if len(t_arr) == 0:
+                t_arr.append(4)
             while t_arr[0] < 4:
                 t_arr[len(t_arr) - 1] += 1
                 for i in reversed(range(1, len(t_arr))):
@@ -282,7 +296,8 @@ class Algoritms:
                         adjy = b_coord[i][1] + d_col[t_arr[i]]
                         if adjy in range(len(maze)) and adjx in range(len(maze[0])) and maze[adjy][adjx] != '#':
                             b_coord_new.append((adjx, adjy))
-                    v += self.expectimax(maze, p_coord, b_coord_new, c_coord, step + 1, coins_collected)[0]
-                    branches += 1
-                    
+                    if len(b_coord_new) == len(b_coord):
+                        v += self.expectimax(maze, p_coord, b_coord_new, c_coord, step + 1, coins_collected)[0]
+                        branches += 1
+
             return v / branches, None

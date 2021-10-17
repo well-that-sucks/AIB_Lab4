@@ -1,0 +1,9 @@
+Outcome,Time,Score,Algorithm
+Lose,11.981s,230,Expectimax
+Lose,12.013s,230,Expectimax
+Lose,13.919s,140,Minimax
+Win,83.084s,2000,Minimax
+Lose,75.574s,1370,Minimax
+Lose,188.79s,1720,Minimax
+Lose,130.36s,1790,Minimax
+Win,77.166s,2200,Minimax

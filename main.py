@@ -15,6 +15,8 @@ pygame.display.set_icon(icon)
 maze = Maze(levels[2])
 smart_bots = int(input("Enter amount of smart bots: "))
 random_bots = int(input("Enter amount of random bots: "))
+chosen_alg = input("Enter algorihtm(minimax(m)/expectimax(e)): ")
+
 maze.generate_new_level(random_level_name, smart_bots, random_bots)
 algorithms = Algoritms()
 func_helper = [('BFS', algorithms.get_bfs_function()), ('UCS', algorithms.get_ucs_function())]
@@ -23,6 +25,9 @@ func_index = 0
 running = True
 clock = pygame.time.Clock()
 reset = True
+is_minimax = True
+if (chosen_alg == 'e'):
+    is_minimax = False
 lives = 3
 score = 0
 
@@ -37,6 +42,7 @@ while running:
         killer_timer = KILLER_MODE_DURATION
         blinking_interval = BLINKING_BASE_INTERVAL
         anim_interval = ANIM_FRAME_DURATION
+        game_start_time = time.time()
         anim_ind = 0
         rand_helper = [-1, 1]
         is_killer_mode_active = False
@@ -107,7 +113,7 @@ while running:
                     coin.change_visibility_state()
                 else:
                     coin_coordinates.append(maze.coord_to_floored_block_position(coin.get_pos()))
-                    # Undone prior to lab4 !!!!!!
+                    # Undone prior to lab4 
                     #steps, path = algorithms.find_path(algorithms.get_astar_function(), maze.get_level(), maze.coord_to_floored_block_position(pacman_ppos), maze.coord_to_floored_block_position(coin.get_pos()))
                     #if steps < min_steps:
                     #    min_steps = steps
@@ -116,6 +122,8 @@ while running:
                     screen.blit(coin.get_sprite(), coin.get_pos())
 
         if are_all_coins_collected:
+            row_contents = ['Win', str(time.time() - game_start_time)[ : 6] + 's', score, 'Minimax' if (is_minimax) else 'Expectimax']
+            append_row_to_csv(results_filename, row_contents)
             level_idx += 1
             if (len(levels) > level_idx):
                 maze.set_level(levels[level_idx])
@@ -150,9 +158,9 @@ while running:
                 ghost_ppos = ghost.get_pos()
                 target_ppos = ghost_ppos
                 if not(ghost.is_randomized()):
-                    start_time = time.time()
+                    #start_time = time.time()
                     steps, path = algorithms.find_path(func_helper[func_index][1], maze.get_level(), maze.coord_to_floored_block_position(ghost_ppos), maze.coord_to_floored_block_position(pacman_ppos))
-                    time_total += time.time() - start_time
+                    #time_total += time.time() - start_time
                     next_cell = find_next_cell(path)
                     target_ppos = (next_cell[0] * SPRITE_SIZE, next_cell[1] * SPRITE_SIZE)
                     if next_cell == maze.coord_to_floored_block_position(pacman_ppos):
@@ -166,18 +174,28 @@ while running:
                     rect_offset_ind += 2
                     color_alg_visual_ind = (color_alg_visual_ind + 1) % len(colors)
                 elif bot_interval == 0:
-                    next_cell = maze.get_free_random_cell()
-                    target_ppos = (next_cell[0] * SPRITE_SIZE, next_cell[1] * SPRITE_SIZE)
-                    ghost.set_velocity(get_direction(target_ppos[0], ghost_ppos[0]) * 3, get_direction(target_ppos[1], ghost_ppos[1]) * 3)
+                    # Choose the option
+                    new_velocity_x = (random.randint(0, 2) - 1) * 3
+                    if new_velocity_x == 0:
+                        new_velocity_y = rand_helper[random.randint(0, 1)] * 3
+                    else:
+                        new_velocity_y = 0
+                    ghost.set_velocity(new_velocity_x, new_velocity_y)
+                    #next_cell = maze.get_free_random_cell()
+                    #target_ppos = (next_cell[0] * SPRITE_SIZE, next_cell[1] * SPRITE_SIZE)
+                    #ghost.set_velocity(get_direction(target_ppos[0], ghost_ppos[0]) * 3, get_direction(target_ppos[1], ghost_ppos[1]) * 3)
 
                 
         
         if (bot_interval == 0):
             bot_interval = BOT_CHANGE_DIRECTION_INTERVAL
-        #Make it change direction every 12 ticks
+        # Make it change direction every 12 ticks
         if (pacman_interval == 0):
             pacman_interval = PACMAN_CHANGE_DIRECTION_INTERVAL
-            minimax_value, target = algorithms.minimax(maze.get_level(), pacman_coordinates, ghost_coordinates, coin_coordinates, 1, -999999, 999999, 0)
+            if is_minimax:
+                minimax_value, target = algorithms.minimax(maze.get_level(), pacman_coordinates, ghost_coordinates, coin_coordinates, 1, -99999999, 99999999, 0)
+            else:
+                minimax_value, target = algorithms.expectimax(maze.get_level(), pacman_coordinates, ghost_coordinates, coin_coordinates, 1, 0)
             #print(minimax_value, ' ###### ', target, ' ### ', pacman_coordinates)
             if not(target is None):
                 target_ppos = (target[0] * SPRITE_SIZE, target[1] * SPRITE_SIZE)
@@ -224,6 +242,8 @@ while running:
                     lives -= 1
                     if lives == 0:
                         has_player_lost = True
+                        row_contents = ['Lose', str(time.time() - game_start_time)[ : 6] + 's', score, 'Minimax' if (is_minimax) else 'Expectimax']
+                        append_row_to_csv(results_filename, row_contents)
                     else:
                         pacman.reset_pos()
                 else:
@@ -237,12 +257,12 @@ while running:
         lives_ins = hud_font.render('Lives: ' + str(lives), True, (255, 255, 255))
         level_ins = hud_font.render('Level: ' + str(level_idx + 1) + '/' + str(len(levels)), True, (255, 255, 255))
         current_alg_ins = hud_font.render('Current algorithm: ' + func_helper[func_index][0], True, (255, 255, 255))
-        alg_exec_time_ins = hud_font.render('Algorithm execution time: ' + str(time_total * 1000)[:6] + 'ms', True, (255, 255, 255))
+        #alg_exec_time_ins = hud_font.render('Algorithm execution time: ' + str(time_total * 1000)[:6] + 'ms', True, (255, 255, 255))
         screen.blit(score_ins, (0, 0))
         screen.blit(lives_ins, (0, 30))
         screen.blit(level_ins, (0, 60))
         screen.blit(current_alg_ins, (0, 90))
-        screen.blit(alg_exec_time_ins, (0, 120))
+        #screen.blit(alg_exec_time_ins, (0, 120))
 
         pygame.display.update()
 

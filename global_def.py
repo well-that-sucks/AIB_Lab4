@@ -1,5 +1,6 @@
 import pygame
 from spritesheetutil import SpriteSheetUtil
+from csv import writer
 
 
 SCREEN_WIDTH = 1200
@@ -25,6 +26,8 @@ TRAVERSAL_FUNCTIONS_AMOUNT = 2
 random_level_name = 'random_level'
 levels = [random_level_name, 'level1', 'level2', 'level3']
 level_idx = 0
+
+results_filename = 'results.csv'
 
 colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0)]
 
@@ -87,3 +90,8 @@ def apply_ghost_sprites(ghosts, sprites):
     for ghost in ghosts:
         ghost.set_sprite(sprites[ind % len(sprites)])
         ind += 1
+
+def append_row_to_csv(filename, list_of_elem):
+    with open(filename, 'a+', newline = '') as write_obj:
+        csv_writer = writer(write_obj)
+        csv_writer.writerow(list_of_elem)
